@@ -9,6 +9,7 @@ import (
 
 //
 type Config interface {
+	Find(Query) Config
 }
 
 //
@@ -95,7 +96,9 @@ func (c *sshConfig) parse() (*sshConfig, error) {
 
 		line = ws.ReplaceAllString(line, " ")
 		ps := kv.Split(line, 2)
-
+		if len(ps) != 2 {
+			return nil, fmt.Errorf("ERROR: Invalid key/value: line %d: %s", n, line)
+		}
 		switch k, v := ps[0], ps[1]; strings.ToLower(k) {
 		case "host":
 			h = host{
@@ -121,4 +124,25 @@ func (c *sshConfig) parse() (*sshConfig, error) {
 		}
 	}
 	return c, nil
+}
+
+//
+func (c *sshConfig) Find(q Query) Config {
+	f := &sshConfig{
+		source:    c.source,
+		delimiter: c.delimiter,
+		options:   options{},
+		hosts:     Hosts{},
+	}
+	for _, p := range q {
+		for _, h := range c.hosts {
+			for _, n := range h.names {
+				if p.key == "host" && strings.Contains(n, p.value) {
+					f.hosts = append(f.hosts, h)
+					break
+				}
+			}
+		}
+	}
+	return f
 }

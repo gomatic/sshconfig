@@ -2,28 +2,24 @@ package sshconfig
 
 import (
 	"bufio"
-	"bytes"
 	"io"
-	"io/ioutil"
+	"os"
+
+	"github.com/prometheus/common/log"
 )
 
 //
 func MustNew(file string) Config {
 	config, err := New(file)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	return config
 }
 
 //
-func New(file string) (Config, error) {
-	source, err := ioutil.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
-
-	r := bufio.NewReader(bytes.NewReader(source))
+func Read(source io.Reader) (Config, error) {
+	r := bufio.NewReader(source)
 	lines := []string{}
 	for {
 
@@ -43,4 +39,14 @@ func New(file string) (Config, error) {
 		delimiter: Space,
 	}
 	return config.parse()
+}
+
+//
+func New(file string) (Config, error) {
+	source, err := os.Open(file)
+	if err != nil {
+		return nil, err
+	}
+	defer source.Close()
+	return Read(source)
 }
